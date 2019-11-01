@@ -1,6 +1,7 @@
 import random as ra
 import logging
 import asyncio
+import websockets
 
 
 FORMAT = "%(levelname)s@%(name)s(%(asctime)s) -- \"%(message)s\""
