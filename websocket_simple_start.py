@@ -7,98 +7,44 @@ import websockets
 FORMAT = "%(levelname)s@%(name)s(%(asctime)s) -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
+class Client:
 
-async def print_message_angrily(address):
-    uri = "ws://localhost:{}".format(address)
-    async with websockets.connect(uri) as websocket:
-        while True:
-            await asyncio.sleep(ra.random() * 3)
-            message = await websocket.recv()
-            logging.info("Fuckin {}!".format(message))
-
-async def print_message_happily(address):
-    uri = "ws://localhost:{}".format(address)
-    async with websockets.connect(uri) as websocket:
-        while True:
-            await asyncio.sleep(ra.random() * 3)
-            message = await websocket.recv()
-            logging.info("Love those {}!".format(message))
-
-async def send_message_back(address):
-    uri = "ws://localhost:{}".format(address)
-    async with websockets.connect(uri) as websocket:
-        while True:
-            await asyncio.sleep(ra.random() * 3)
-            await websocket.send("hello servi!")
-
-class Server:
-    TOWNSHIPS = {
-    "Whoville":[],
-    "Pooville":[],
-    "Trueville":[],
-    "Flooville":[],
-    "Shoeville":[],
-    "Blueville":[],
-    "Screwville":[],
-    "Whatatodoville":[],
-    "Grueville":[],
-    "Jewville":[],
-    "Stewville":[],
-    "Brewville":[],
-    "Gooville":[],
-    }
-    FULLSTRING = "No more towns left"
-
-    def assign_connection_to_town(self, websocket):
-        for town in self.TOWNSHIPS:
-            if not self.TOWNSHIPS[town]:
-                self.TOWNSHIPS[town] = websocket
-                return town
-        return self.FULLSTRING
-
-    def remove_connection_from_town(self, websocket):
-        for town in self.TOWNSHIPS:
-            if self.TOWNSHIPS[town] is websocket:
-                self.TOWNSHIPS[town] = []
-
-    def main(self, address):
-        async def handler(websocket, path):
-            name = self.assign_connection_to_town(websocket)
-            if name == self.FULLSTRING:
-                raise
-            logging.info(self.TOWNSHIPS)
-            try:
-                await main(websocket, path)
-            finally:
-                self.remove_connection_from_town(websocket)
-                logging.log(self.TOWNSHIPS)
-
-        async def send_message(websocket, path):
+    async def print_message_angrily(self,address):
+        uri = "ws://localhost:{}".format(address)
+        async with websockets.connect(uri) as websocket:
+            name = await websocket.recv()
+            logging.info("I have a name! My name is {}".format(name))
             while True:
                 await asyncio.sleep(ra.random() * 3)
-                await websocket.send("toasties")
-
-        async def process_message(websocket, path):
-            while True:
                 message = await websocket.recv()
-                logging.info("Server got a message: {}".format(message))
+                logging.info("{} says: Fuckin {}!".format(name, message))
 
-        async def main(websocket, path):
-            tasks = []
-            tasks.append(process_message(websocket, path))
-            tasks.append(send_message(websocket, path))
-            await asyncio.gather(*tasks)
+    async def print_message_happily(self,address):
+        uri = "ws://localhost:{}".format(address)
+        async with websockets.connect(uri) as websocket:
+            name = await websocket.recv()
+            logging.info("I have a name! My name is {}".format(name))
+            while True:
+                await asyncio.sleep(ra.random() * 3)
+                message = await websocket.recv()
+                logging.info("{} says: Love those {}!".format(name, message))
 
-        return websockets.serve(handler, "localhost", address)
+    async def send_message_back(self,address):
+        uri = "ws://localhost:{}".format(address)
+        async with websockets.connect(uri) as websocket:
+            name = await websocket.recv()
+            logging.info("I have a name! My name is {}".format(name))
+            while True:
+                await asyncio.sleep(ra.random() * 3)
+                await websocket.send("hello from {} servi!".format(name))
 
-async def server_and_clients(address):
-    tasks = []
-    srv = Server()
-    tasks.append(srv.main(address))
-    tasks.append(print_message_angrily(address))
-    tasks.append(print_message_happily(address))
-    tasks.append(send_message_back(address))
-    await asyncio.gather(*tasks)
+
+    async def server_and_clients(self,address):
+        tasks = []
+        tasks.append(print_message_angrily(address))
+        tasks.append(print_message_happily(address))
+        tasks.append(send_message_back(address))
+        await asyncio.gather(*tasks)
 
 if __name__=="__main__":
     address = 8002
