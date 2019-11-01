@@ -16,32 +16,32 @@ class Client:
         async with websockets.connect(self.uri) as websocket:
             self.name = await websocket.recv()
             logging.info("I have a name! My name is {}".format(self.name))
-            await self.choose_my_function()
+            await self.choose_my_function(websocket)
 
-    async def print_message_angrily(self):
+    async def print_message_angrily(self, websocket):
         while True:
             await asyncio.sleep(ra.random() * 3)
             message = await websocket.recv()
-            logging.info("{} says: Fuckin {}!".format(name, message))
+            logging.info("{} says: Fuckin {}!".format(self.name, message))
 
-    async def print_message_happily(self):
+    async def print_message_happily(self, websocket):
         while True:
             await asyncio.sleep(ra.random() * 3)
             message = await websocket.recv()
-            logging.info("{} says: Love those {}!".format(name, message))
+            logging.info("{} says: Love those {}!".format(self.name, message))
 
-    async def send_message_back(self):
+    async def send_message_back(self, websocket):
         while True:
             await asyncio.sleep(ra.random() * 3)
-            await websocket.send("hello from {} servi!".format(name))
+            await websocket.send("hello from {} servi!".format(self.name))
 
-    async def choose_my_function(self):
+    async def choose_my_function(self, websocket):
         tasks = []
-        tasks.append(print_message_angrily)
-        tasks.append(print_message_happily)
-        tasks.append(send_message_back)
+        tasks.append(self.print_message_angrily)
+        tasks.append(self.print_message_happily)
+        tasks.append(self.send_message_back)
         choice = ra.randint(0, len(tasks) - 1)
-        await tasks[choice]()
+        await tasks[choice](websocket)
 
 if __name__=="__main__":
     address = 8002

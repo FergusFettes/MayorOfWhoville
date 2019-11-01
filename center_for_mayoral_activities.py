@@ -7,6 +7,7 @@ import websockets
 FORMAT = "%(levelname)s@%(name)s(%(asctime)s) -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
+from township import Client
 
 class Server:
     TOWNSHIPS = {
