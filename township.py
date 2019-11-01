@@ -8,6 +8,8 @@ import websockets
 FORMAT = "%(levelname)s@%(name)s(%(asctime)s) -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
+PATH = os.path.dirname(os.path.realpath(__file__)) + "/THE_MAYOR_OF_WHOVILLE_IN_TOWN"
+
 class Town:
     MAYOR_REQUEST = "We need to speak to the Mayor!"
     TRANSMISSION_COMPLETE = "The mayor is in town!"
@@ -35,21 +37,21 @@ class Town:
             task.cancel()
 
     async def wait_for_transmission_end(self, websocket):
+        logging.info("Waiting for transmission to end")
         message = await websocket.recv()
         logging.info("Processor got a message: {}".format(message))
-        if message == self.TRANSMISSION_COMPLETE:
-            self.tranmission_ongoing = False
 
     async def receive_mayor(self):
+        logging.info("Ready to receive mayor")
         async with websockets.connect(self.uri) as inner_websocket:
             await inner_websocket.send(self.MAYOR_REQUEST)
             await inner_websocket.send(self.name)
-            self.tranmission_ongoing = True
-            path = os.path.dirname(os.path.realpath(__file__)) + "/THE_MAYOR_OF_WHOVILLE_IN_TOWN"
-            with open(path, 'wb') as fi:
+            with open(PATH, 'wb') as fi:
                 while True:
                     data = await inner_websocket.recv()
-                    fi.write(self.CHUNK)
+                    if not data:
+                        break
+                    fi.write(data)
 
     async def print_message_angrily(self, websocket):
         while True:
@@ -74,8 +76,8 @@ class Town:
         tasks.append(self.print_message_happily)
         tasks.append(self.send_message_back)
         choice = ra.randint(0, len(tasks) - 1)
-        return tasks[choice]
-        # return self.process_transmission
+        # return tasks[choice]
+        return self.process_transmission
 
 async def make_clients(num, address):
     towns = []

@@ -12,7 +12,7 @@ from township import Town
 
 PATH = os.path.dirname(os.path.realpath(__file__)) + "/THE_MAYOR_OF_WHOVILLE"
 
-class Server:
+class ServerHelper:
     TOWNSHIPS = {
     "Whoville":[],
     "Pooville":[],
@@ -57,61 +57,66 @@ class Server:
         choice = ra.randint(0, len(self.ACTIVE_TOWNS) - 1)
         return self.TOWNSHIPS[self.ACTIVE_TOWNS[choice]]
 
-    def main(self, address):
-        async def handler(websocket, path):
-            handshake = await websocket.recv()
-            if handshake == self.TOWNSHIP_HANDSAKE:
-                name = self.assign_connection_to_town(websocket)
-                if name == self.FULLSTRING:
-                    raise
-                await township_loop(websocket, name)
-            elif handshake == self.MAYOR_REQUEST:
-                name = await websocket.recv()
-                parent_websocket = self.TOWNSHIPS[name]
-                await send_mayor(websocket, self.CHUNK)
-                await parent_websocket.send(self.TRANSMISSION_COMPLETE)
-                logging.info("Mayor sent")
+class Server:
+    def __init__(self):
+        self.helper = ServerHelper()
 
-        async def send_mayor(websocket, chunk):
-            with open(PATH, 'rb') as fi:
-                while True:
-                    byte_chunk = fi.read(chunk)
-                    if not byte_chunk:
-                        break
-                    await websocket.send(byte_chunk)
+    def create_websocket_handler(self, address):
+        return websockets.serve(self.async_init, "localhost", address)
 
-        async def township_loop(websocket, name):
-            await assign_name(websocket, name)
-            try:
-                await main(websocket)
-            finally:
-                self.remove_connection_from_town(websocket)
-                logging.info("{} has disconnected!".format(name))
+    async def async_init(self, websocket, path):
+        handshake = await websocket.recv()
+        logging.info("Handshake: {}".format(handshake))
+        if handshake == self.helper.TOWNSHIP_HANDSAKE:
+            await self.main_township_loop(websocket)
+        elif handshake == self.helper.MAYOR_REQUEST:
+            await self.send_mayor(websocket, self.helper.CHUNK)
 
-        async def assign_name(websocket, name):
-            await websocket.send(name)
-            logging.info("{} has been assigned!".format(name))
-
-        async def send_message(websocket):
+    async def send_mayor(self, websocket, chunk):
+        name = await websocket.recv()
+        parent_websocket = self.helper.TOWNSHIPS[name]
+        with open(PATH, 'rb') as fi:
             while True:
-                await asyncio.sleep(ra.random() * 3)
-                await websocket.send("toasties")
+                byte_chunk = fi.read(chunk)
+                await websocket.send(byte_chunk)
+                if not byte_chunk:
+                    break
+        await parent_websocket.send(self.helper.TRANSMISSION_COMPLETE)
+        logging.info("Mayor sent")
 
-        async def process_message(websocket):
-            while True:
-                message = await websocket.recv()
-                logging.info("Server got a message: {}".format(message))
+    async def main_township_loop(self, websocket):
+        name = self.helper.assign_connection_to_town(websocket)
+        if name == self.helper.FULLSTRING:
+            raise
+        await self.assign_name(websocket, name)
+        try:
+            await self.async_gather(websocket)
+        finally:
+            self.helper.remove_connection_from_town(websocket)
+            logging.info("{} has disconnected!".format(name))
 
-        async def main(websocket):
-            tasks = []
-            tasks.append(process_message(websocket))
-            tasks.append(send_message(websocket))
-            await asyncio.gather(*tasks)
+    async def assign_name(self, websocket, name):
+        await websocket.send(name)
+        logging.info("{} has been assigned!".format(name))
 
-        return websockets.serve(handler, "localhost", address)
+    async def send_message(self, websocket):
+        while True:
+            await asyncio.sleep(ra.random() * 3)
+            await websocket.send("toasties")
+
+    async def process_message(self, websocket):
+        while True:
+            message = await websocket.recv()
+            logging.info("Server got a message: {}".format(message))
+
+    async def async_gather(self, websocket):
+        tasks = []
+        tasks.append(self.process_message(websocket))
+        tasks.append(self.send_message(websocket))
+        await asyncio.gather(*tasks)
 
 if __name__=="__main__":
     address = 8002
     srv = Server()
-    asyncio.get_event_loop().run_until_complete(srv.main(address))
+    asyncio.get_event_loop().run_until_complete(srv.create_websocket_handler(address))
     asyncio.get_event_loop().run_forever()
