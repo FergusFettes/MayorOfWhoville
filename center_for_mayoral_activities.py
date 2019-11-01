@@ -1,3 +1,4 @@
+import os
 import asyncio
 import logging
 import time
@@ -8,6 +9,8 @@ FORMAT = "%(levelname)s@%(name)s(%(asctime)s) -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
 from township import Town
+
+PATH = os.path.dirname(os.path.realpath(__file__)) + "/THE_MAYOR_OF_WHOVILLE"
 
 class Server:
     TOWNSHIPS = {
@@ -61,12 +64,7 @@ class Server:
                 name = self.assign_connection_to_town(websocket)
                 if name == self.FULLSTRING:
                     raise
-                await assign_name(websocket, name)
-                try:
-                    await main(websocket)
-                finally:
-                    self.remove_connection_from_town(websocket)
-                    logging.log("{} has disconnected!".format(name))
+                await township_loop(websocket, name)
             elif handshake == self.MAYOR_REQUEST:
                 name = await websocket.recv()
                 parent_websocket = self.TOWNSHIPS[name]
@@ -75,13 +73,20 @@ class Server:
                 logging.info("Mayor sent")
 
         async def send_mayor(websocket, chunk):
-            path = os.path.dirname(os.path.realpath(__file__)) + "/THE_MAYOR_OF_WHOVILLE"
-            with open(path, 'rb') as fi:
+            with open(PATH, 'rb') as fi:
                 while True:
                     byte_chunk = fi.read(chunk)
                     if not byte_chunk:
                         break
                     await websocket.send(byte_chunk)
+
+        async def township_loop(websocket, name):
+            await assign_name(websocket, name)
+            try:
+                await main(websocket)
+            finally:
+                self.remove_connection_from_town(websocket)
+                logging.info("{} has disconnected!".format(name))
 
         async def assign_name(websocket, name):
             await websocket.send(name)

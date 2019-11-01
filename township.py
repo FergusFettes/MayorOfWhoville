@@ -1,3 +1,4 @@
+import os
 import asyncio
 import logging
 import time
@@ -14,7 +15,6 @@ class Town:
     def __init__(self, address):
         self.uri = "ws://localhost:{}".format(address)
         self.name = ''
-        self.tranmission_ongoing = False
 
     async def initiate(self):
         async with websockets.connect(self.uri) as websocket:
@@ -25,20 +25,29 @@ class Town:
             await func(websocket)
 
     async def process_transmission(self, websocket):
-        self.receive_mayor()
+        reciever = asyncio.ensure_future(self.receive_mayor())
+        ender = asyncio.ensure_future(self.wait_for_transmission_end(websocket))
+        done, pending = await asyncio.wait(
+            [reciever, ender],
+            return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in pending:
+            task.cancel()
+
+    async def wait_for_transmission_end(self, websocket):
         message = await websocket.recv()
         logging.info("Processor got a message: {}".format(message))
-        if message == TRANSMISSION_COMPLETE:
+        if message == self.TRANSMISSION_COMPLETE:
             self.tranmission_ongoing = False
 
     async def receive_mayor(self):
         async with websockets.connect(self.uri) as inner_websocket:
-            await inner_websocket.send(MAYOR_REQUEST)
+            await inner_websocket.send(self.MAYOR_REQUEST)
             await inner_websocket.send(self.name)
             self.tranmission_ongoing = True
             path = os.path.dirname(os.path.realpath(__file__)) + "/THE_MAYOR_OF_WHOVILLE_IN_TOWN"
             with open(path, 'wb') as fi:
-                while self.transmission_ongoing:
+                while True:
                     data = await inner_websocket.recv()
                     fi.write(self.CHUNK)
 
@@ -66,15 +75,17 @@ class Town:
         tasks.append(self.send_message_back)
         choice = ra.randint(0, len(tasks) - 1)
         return tasks[choice]
+        # return self.process_transmission
 
 async def make_clients(num, address):
-    clients = []
+    towns = []
     for i in range(num):
         t = Town(address)
-        clients.append(asyncio.ensure_future(t.initiate()))
-    await asyncio.gather(*clients)
+        towns.append(asyncio.ensure_future(t.initiate()))
+    await asyncio.gather(*towns)
 
 if __name__=="__main__":
     address = 8002
-    asyncio.get_event_loop().run_until_complete(make_clients(6, address))
+    num = 1
+    asyncio.get_event_loop().run_until_complete(make_clients(num, address))
     asyncio.get_event_loop().run_forever()
