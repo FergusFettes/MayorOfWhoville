@@ -7,7 +7,7 @@ import websockets
 FORMAT = "%(levelname)s@%(name)s(%(asctime)s) -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
-from township import Client
+from township import Town
 
 class Server:
     TOWNSHIPS = {
@@ -27,6 +27,10 @@ class Server:
     }
     FULLSTRING = "No more towns left"
     ACTIVE_TOWNS = []
+    TOWNSHIP_HANDSAKE = "I'm just a township"
+    MAYOR_REQUEST = "We need to speak to the Mayor!"
+    TRANSMISSION_COMPLETE = "The mayor is in town!"
+    CHUNK = 1024
 
     def assign_connection_to_town(self, websocket):
         possible_towns = []
@@ -52,15 +56,32 @@ class Server:
 
     def main(self, address):
         async def handler(websocket, path):
-            name = self.assign_connection_to_town(websocket)
-            if name == self.FULLSTRING:
-                raise
-            await assign_name(websocket, name)
-            try:
-                await main(websocket)
-            finally:
-                self.remove_connection_from_town(websocket)
-                logging.log("{} has disconnected!".format(name))
+            handshake = await websocket.recv()
+            if handshake == self.TOWNSHIP_HANDSAKE:
+                name = self.assign_connection_to_town(websocket)
+                if name == self.FULLSTRING:
+                    raise
+                await assign_name(websocket, name)
+                try:
+                    await main(websocket)
+                finally:
+                    self.remove_connection_from_town(websocket)
+                    logging.log("{} has disconnected!".format(name))
+            elif handshake == self.MAYOR_REQUEST:
+                name = await websocket.recv()
+                parent_websocket = self.TOWNSHIPS[name]
+                await send_mayor(websocket, self.CHUNK)
+                await parent_websocket.send(self.TRANSMISSION_COMPLETE)
+                logging.info("Mayor sent")
+
+        async def send_mayor(websocket, chunk):
+            path = os.path.dirname(os.path.realpath(__file__)) + "/THE_MAYOR_OF_WHOVILLE"
+            with open(path, 'rb') as fi:
+                while True:
+                    byte_chunk = fi.read(chunk)
+                    if not byte_chunk:
+                        break
+                    await websocket.send(byte_chunk)
 
         async def assign_name(websocket, name):
             await websocket.send(name)
