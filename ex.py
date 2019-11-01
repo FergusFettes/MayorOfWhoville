@@ -41,41 +41,42 @@ class TheLandOfWhos:
         unexamined_towns = list(self.TOWNSHIPS.difference(self.PLACES_CHECKED))
         return unexamined_towns[ra.randint(0, len(unexamined_towns) - 1)]
 
+
     async def hunter_loop(self):
         while True:
             if self.MAYOR_WHEREABOUTS_KNOWN:
                 await asyncio.sleep(0.1)
             else:
-                self.check_random_town()
+                await self.check_random_town()
 
     async def check_random_town(self):
-            town = self.choose_unexamined_town()
-            logging.info("Checking {}".format(town))
-            await asyncio.sleep((ra.random() + 0.1) * 3)
-            if self.LOCATION_OF_THE_MAYOR_OF_WHOVILLE == town:
-                logging.info("Found the mayor in {}!".format(town))
-                self.MAYOR_WHEREABOUTS_KNOWN = True
-                self.PLACES_CHECKED = set()
-            elif self.LOCATION_OF_THE_MAYOR_OF_WHOVILLE == self.TRAVELLING_STRING:
-                logging.info("Spies report the mayor was seen in a roadside tavern near {}!".format(town))
-                self.PLACES_CHECKED.add(town)
-
+        town = self.choose_unexamined_town()
+        logging.info("Checking {}".format(town))
+        self.PLACES_CHECKED.add(town)
+        await asyncio.sleep((ra.random() + 0.1) * 3)
+        if self.LOCATION_OF_THE_MAYOR_OF_WHOVILLE == town:
+            logging.info("Found the mayor in {}!".format(town))
+            self.MAYOR_WHEREABOUTS_KNOWN = True
+            self.PLACES_CHECKED = set()
+        elif self.LOCATION_OF_THE_MAYOR_OF_WHOVILLE == self.TRAVELLING_STRING:
+            logging.info("Spies report the mayor was seen in a roadside tavern near {}!".format(town))
+            self.PLACES_CHECKED = set()
 
     async def escapade_loop(self):
         while True:
             if self.MAYOR_WHEREABOUTS_KNOWN:
-                self.escape_to_some_other_town()
+                await self.escape_to_some_other_town()
             else:
                 await asyncio.sleep(0.1)
 
     async def escape_to_some_other_town(self):
-            logging.info("The mayor escaped! Keep on the hunt!")
-            destination = self.choose_other_town()
-            self.LOCATION_OF_THE_MAYOR_OF_WHOVILLE = self.TRAVELLING_STRING
-            self.MAYOR_WHEREABOUTS_KNOWN = False
-            logging.info("Mayor is travelling to {}".format(destination))
-            await asyncio.sleep(ra.randint(1, 10))
-            self.LOCATION_OF_THE_MAYOR_OF_WHOVILLE = destination
+        logging.info("The mayor escaped! Keep on the hunt!")
+        destination = self.choose_other_town()
+        self.LOCATION_OF_THE_MAYOR_OF_WHOVILLE = self.TRAVELLING_STRING
+        self.MAYOR_WHEREABOUTS_KNOWN = False
+        logging.info("Mayor is travelling to {}".format(destination))
+        await asyncio.sleep(ra.randint(1, 10))
+        self.LOCATION_OF_THE_MAYOR_OF_WHOVILLE = destination
 
     async def hunters(self):
         tasks =[]
