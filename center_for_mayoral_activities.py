@@ -45,6 +45,7 @@ class ServerHelper:
     TOWNSHIP_HANDSAKE = "I'm just a township"
     MAYOR_REQUEST = "We need to speak to the Mayor!"
     MAYOR_RETURN = "The mayor has done us a great service!"
+    LISTENER_REQUEST = "I think you've assassinated the mayor! I demand to speak with them immedately!"
     TRANSMISSION_COMPLETE = "The mayor is in town!"
     MAYOR_KEEPALIVE = "We still have them, done worry!"
     CHUNK = 1024
@@ -87,6 +88,7 @@ class Server:
         self.helper = ServerHelper()
         self.coffers = 0
         self.keepalive_timer = time.time()
+        self.transmission_ongoing = False
         # Backup the mayor, in case one of the swarm drops them during a restart
         os.system("cp {} {}".format(FILE, BACK))
 
@@ -103,6 +105,12 @@ class Server:
             logging.info("Closing temporary connection")
         elif handshake == self.helper.MAYOR_RETURN:
             await self.receive_mayor(websocket)
+            logging.info("Closing temporary connection")
+        elif handshake == self.helper.LISTENER_REQUEST:
+            self.transmission_ongoing = True
+            logging.warning("Someone wants to hear the mayor! Requesting transmission")
+            await self.request_transmission(websocket)
+            self.transmission_ongoing = False
 
     async def process_mayor_request(self, websocket):
         if os.path.exists(FILE):
@@ -136,6 +144,19 @@ class Server:
         os.system("mv {} {}".format(TEMP, FILE))
         self.helper.MAYOR_LOCATION = "Home"
 
+    async def request_transmission(self, websocket):
+        mayor_websocket = self.helper.TOWNSHIPS[self.helper.MAYOR_LOCATION]
+        await mayor_websocket.send(self.helper.LISTENER_REQUEST)
+        await self.pass_transmission_to(websocket, mayor_websocket)
+
+    async def pass_transmission_to(self, listener_websocket, mayor_websocket):
+        logging.info("Passing transmission")
+        while True:
+            data = await mayor_websocket.recv()
+            await listener_websocket.send(data)
+            if not data:
+                break
+
     async def main_server_activities(self, websocket):
         name = self.helper.assign_connection_to_town(websocket)
         if name == self.helper.FULLSTRING:
@@ -163,7 +184,9 @@ class Server:
     async def mayor_manager(self, websocket):
         websocket_name = self.helper.get_name_of_websocket(websocket)
         if websocket_name == self.helper.MAYOR_LOCATION:
-            if ra.random() < self.helper.MAYOR_RETURN_CHANCE:
+            if self.transmission_ongoing:
+                pass
+            elif ra.random() < self.helper.MAYOR_RETURN_CHANCE:
                 logging.info("Demanding return of mayor!")
                 await websocket.send(self.helper.MAYOR_RETURN)
         else:

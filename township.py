@@ -16,6 +16,7 @@ MAYOR_PARAMS = wave._wave_params(1, 1, 8000, 128000, 'NONE', 'not compressed')
 
 
 class Town:
+    LISTENER_REQUEST = "I think you've assassinated the mayor! I demand to speak with them immedately!"
     MAYOR_REQUEST = "We need to speak to the Mayor!"
     MAYOR_KEEPALIVE = "We still have them, done worry!"
     MAYOR_RETURN = "The mayor has done us a great service!"
@@ -48,6 +49,7 @@ class Town:
             if os.path.exists(self.path):
                 await self.mayor_duties(websocket)
             else:
+                await self.request_mayor()
                 await self.other_activities(websocket)
             await self.idle()
 
@@ -59,6 +61,8 @@ class Town:
         message = await websocket.recv()
         if message == self.MAYOR_RETURN:
             await self.return_mayor()
+        elif message == self.LISTENER_REQUEST:
+            await self.send_mayor(websocket, transmission=True)
         else:
             await websocket.send(self.MAYOR_KEEPALIVE)
             logging.warning("Mayor is going about their important duties in {}".format(self.name))
@@ -99,14 +103,17 @@ class Town:
             logging.info("Returning mayor! Farewell!")
             await self.send_mayor(inner_websocket)
 
-    async def send_mayor(self, inner_websocket):
+    async def send_mayor(self, inner_websocket, transmission=False):
+        if transmission:
+            logging.info("Starting transmission")
         with wave.open(self.path, 'rb') as fi:
             while True:
                 byte_chunk = fi.readframes(self.CHUNK)
                 await inner_websocket.send(byte_chunk)
                 if not byte_chunk:
                     break
-        os.system("rm {}".format(self.path))
+        if not transmission:
+            os.system("rm {}".format(self.path))
 
     async def send_gift(self, websocket):
         logging.warning("{} has an excess of gold, sending some to CMA".format(self.name))
