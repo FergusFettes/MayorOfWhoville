@@ -21,9 +21,11 @@ class ServerHelper:
     TOWNSHIPS = {
     "Whoville":[],
     "Pooville":[],
+    "Notuptoyouville":[],
     "Trueville":[],
     "Flooville":[],
     "Shoeville":[],
+    "Youville":[],
     "Blueville":[],
     "Screwville":[],
     "Whatatodoville":[],
@@ -31,7 +33,12 @@ class ServerHelper:
     "Jewville":[],
     "Stewville":[],
     "Brewville":[],
+    "Clueville":[],
     "Gooville":[],
+    "Badooville":[],
+    "Manuville":[],
+    "DontmindifIdoville":[],
+    "Yewville":[],
     }
     FULLSTRING = "No more towns left"
     ACTIVE_TOWNS = []
