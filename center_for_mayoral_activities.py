@@ -34,6 +34,7 @@ class ServerHelper:
     ACTIVE_TOWNS = []
     TOWNSHIP_HANDSAKE = "I'm just a township"
     MAYOR_REQUEST = "We need to speak to the Mayor!"
+    MAYOR_RETURN = "The mayor has done us a great service!"
     TRANSMISSION_COMPLETE = "The mayor is in town!"
     CHUNK = 1024
     CONFIRMED = "Mayor will be right there!"
@@ -71,6 +72,7 @@ class ServerHelper:
 class Server:
     def __init__(self):
         self.helper = ServerHelper()
+        self.coffers = 0
 
     def create_websocket_handler(self, address):
         return websockets.serve(self.async_init, "localhost", address)
@@ -82,7 +84,10 @@ class Server:
             await self.main_township_loop(websocket)
         elif handshake == self.helper.MAYOR_REQUEST:
             await self.process_mayor_request(websocket)
-        logging.info("Closing connection")
+            logging.info("Closing temporary connection")
+        elif handshake == self.helper.MAYOR_RETURN:
+            await self.receive_mayor(websocket)
+            logging.info("Closing temporary connection")
 
     async def process_mayor_request(self, websocket):
         if os.path.exists(FILE):
@@ -103,13 +108,23 @@ class Server:
                     break
         os.system("rm {}".format(TEMP))
 
+    async def receive_mayor(self, inner_websocket):
+        with open(TEMP, 'wb') as fi:
+            while True:
+                data = await inner_websocket.recv()
+                if not data:
+                    break
+                fi.write(data)
+        os.system("mv {} {}".format(TEMP, FILE))
+
     async def main_township_loop(self, websocket):
         name = self.helper.assign_connection_to_town(websocket)
         if name == self.helper.FULLSTRING:
             raise
         await self.assign_name(websocket, name)
         try:
-            await self.async_gather_functions(websocket)
+            while True:
+                await self.async_gather_functions(websocket)
         finally:
             self.helper.remove_connection_from_town(websocket)
             logging.info("{} has disconnected!".format(name))
@@ -119,12 +134,33 @@ class Server:
         logging.info("{} has been assigned!".format(name))
 
     async def async_gather_functions(self, websocket):
-        while True:
-            logging.info("Township ticking over: {}".format(
-                self.helper.get_name_of_websocket(websocket)
-            ))
-            wait_time = (ra.random() * self.helper.WAIT_RANGE) + self.helper.WAIT_MINIMUM
-            await asyncio.sleep(wait_time)
+        tasks = []
+        tasks.append(self.idle_township(websocket))
+        tasks.append(self.recieve_gold(websocket))
+        tasks.append(self.send_gold(websocket))
+        await asyncio.gather(*tasks)
+
+
+    async def idle_township(self, websocket):
+        logging.info("Township ticking over: {}".format(
+            self.helper.get_name_of_websocket(websocket)
+        ))
+        wait_time = (ra.random() * self.helper.WAIT_RANGE) + self.helper.WAIT_MINIMUM
+        await asyncio.sleep(wait_time)
+
+    async def recieve_gold(self, websocket):
+        income = await websocket.recv()
+        logging.info("Recieved {} from {}! This will help out some needy people".format(income, self.helper.get_name_of_websocket(websocket)))
+        self.coffers += int(income)
+
+    async def send_gold(self, websocket):
+        if self.coffers:
+            amount = self.coffers // 5
+            await websocket.send(str(amount))
+            logging.info("Send {} to {}!".format(amount, self.helper.get_name_of_websocket(websocket)))
+            self.coffers -= amount
+
+
 
 if __name__=="__main__":
     address = 8002
