@@ -5,7 +5,7 @@ import time
 import random as ra
 import websockets
 
-FORMAT = "%(levelname)s@%(name)s(%(asctime)s)\n -- \"%(message)s\""
+FORMAT = "%(levelname)s@%(name)s(%(asctime)s) -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
 from township import Town
@@ -154,8 +154,9 @@ class Server:
         await asyncio.sleep(wait_time)
 
     async def mayor_keepalive(self, websocket):
-        if time.time() - self.keepalive_timer > self.helper.WAIT_RANGE:
-            logging.warn("Looks like the mayor might be missing!")
+        now = time.time() - self.keepalive_timer
+        if now > self.helper.WAIT_RANGE:
+            logging.warning("Noone has heard from the mayor in {} seconds!".format(now))
             await asyncio.sleep(self.helper.WAIT_MINIMUM)
             if time.time() - self.keepalive_timer > self.helper.WAIT_RANGE:
                 logging.error("The mayor has vanished! Resurrecting.")
@@ -166,10 +167,9 @@ class Server:
         if message == self.helper.MAYOR_KEEPALIVE:
             self.keepalive_timer = time.time()
         else:
-            await self.recieve_gold(message)
+            await self.recieve_gold(message, websocket)
 
-    async def recieve_gold(self, income):
-        income = await websocket.recv()
+    async def recieve_gold(self, income, websocket):
         logging.info("Recieved {} from {}! This will help out some needy people".format(income, self.helper.get_name_of_websocket(websocket)))
         self.coffers += int(income)
 

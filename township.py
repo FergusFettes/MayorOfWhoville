@@ -5,7 +5,7 @@ import time
 import random as ra
 import websockets
 
-FORMAT = "%(levelname)s@%(name)s(%(asctime)s)\n -- \"%(message)s\""
+FORMAT = "%(levelname)s@%(name)s(%(asctime)s) -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
 PATH = os.path.dirname(os.path.realpath(__file__))
@@ -25,6 +25,7 @@ class Town:
     MAYOR_RETURN_CHANCE = 0.3
     CHUNK = 1024
     def __init__(self, address):
+        os.system("rm {}".format(FILE))
         self.uri = "ws://localhost:{}".format(address)
         self.name = ''
 
