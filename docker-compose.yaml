@@ -1,5 +1,9 @@
 version: '3'
 services:
+  cma:
+    image: whoville:latest
+    entrypoint: ./cma_start.sh
+    network_mode: host
   town1:
     image: whoville:latest
     entrypoint: ./town_start.sh
@@ -11,8 +15,4 @@ services:
   town3:
     image: whoville:latest
     entrypoint: ./town_start.sh
-    network_mode: host
-  cma:
-    image: whoville:latest
-    entrypoint: ./cma_start.sh
     network_mode: host

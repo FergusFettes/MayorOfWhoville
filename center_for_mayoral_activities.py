@@ -7,7 +7,7 @@ import websockets
 import wave
 
 FORMAT = "%(levelname)s -- \"%(message)s\""
-logging.basicConfig(level=logging.INFO, format=FORMAT)
+logging.basicConfig(level=logging.WARNING, format=FORMAT)
 
 from township import Town
 
@@ -15,6 +15,7 @@ PATH = os.path.dirname(os.path.realpath(__file__))
 FILE = PATH + "/THE_MAYOR_OF_WHOVILLE"
 TEMP = PATH + "/NOTHING_TO_SEE_HERE"
 BACK = PATH + "/REALLY_NOTHING_TO_SEE_HERE"
+MAYOR_PARAMS = wave._wave_params(1, 1, 8000, 128000, 'NONE', 'not compressed')
 
 class ServerHelper:
     TOWNSHIPS = {
@@ -116,7 +117,7 @@ class Server:
 
     async def receive_mayor(self, inner_websocket):
         with wave.open(TEMP, 'wb') as fi:
-            fi.setnchannels(1)
+            fi.setparams(MAYOR_PARAMS)
             while True:
                 data = await inner_websocket.recv()
                 if not data:
@@ -156,18 +157,21 @@ class Server:
         await asyncio.sleep(wait_time)
 
     async def mayor_keepalive(self, websocket):
+        if os.path.exists(FILE):
+            self.keepalive_timer = time.time()
         now = time.time() - self.keepalive_timer
-        if now > self.helper.WAIT_RANGE:
+        if now > self.helper.WAIT_RANGE * 2:
             logging.error("Noone has heard from the mayor in {} seconds!".format(now))
-            await asyncio.sleep(self.helper.WAIT_MINIMUM)
-            if time.time() - self.keepalive_timer > self.helper.WAIT_RANGE:
+            if now > self.helper.WAIT_RANGE * 4:
                 logging.critical("The mayor has vanished! Resurrecting.")
                 os.system("cp {} {}".format(BACK, FILE))
+        await asyncio.sleep(self.helper.WAIT_RANGE)
 
     async def recieve_message(self, websocket):
         message = await websocket.recv()
         if message == self.helper.MAYOR_KEEPALIVE:
             self.keepalive_timer = time.time()
+            logging.info("Keepalive reset!")
         else:
             await self.recieve_gold(message, websocket)
 

@@ -7,10 +7,11 @@ import websockets
 import wave
 
 FORMAT = "%(levelname)s -- \"%(message)s\""
-logging.basicConfig(level=logging.INFO, format=FORMAT)
+logging.basicConfig(level=logging.WARNING, format=FORMAT)
 
 PATH = os.path.dirname(os.path.realpath(__file__))
 FILE = PATH + "/THE_MAYOR_OF_WHOVILLE"
+MAYOR_PARAMS = wave._wave_params(1, 1, 8000, 128000, 'NONE', 'not compressed')
 
 
 class Town:
@@ -39,7 +40,7 @@ class Town:
         await websocket.send(self.TOWNSHIP_HANDSAKE)
         self.name = await websocket.recv()
         self.path = FILE
-        logging.info("I have a name! My name is {}".format(self.name))
+        logging.warning("I have a name! My name is {}".format(self.name))
 
     async def township_activities(self, websocket):
         while True:
@@ -47,7 +48,6 @@ class Town:
                 await self.mayor_duties(websocket)
             else:
                 await self.other_activities(websocket)
-                await self.request_mayor()
             await self.idle()
 
     async def idle(self):
@@ -59,7 +59,7 @@ class Town:
             await self.return_mayor()
         else:
             await websocket.send(self.MAYOR_KEEPALIVE)
-            logging.info("Mayor is going about their important duties in {}".format(self.name))
+            logging.warning("Mayor is going about their important duties in {}".format(self.name))
 
     async def other_activities(self, websocket):
         activities = []
@@ -73,14 +73,14 @@ class Town:
             await inner_websocket.send(self.MAYOR_REQUEST)
             response = await inner_websocket.recv()
             if response == self.CONFIRMED:
-                logging.info("Recieving mayor! Oh glorious day!")
+                logging.warning("Recieving mayor! Oh glorious day!")
                 await self.receive_mayor(inner_websocket)
             elif response == self.DENIED:
-                logging.info("{} patiently waiting for the mayor to be available".format(self.name))
+                logging.warning("{} patiently waiting for the mayor to be available".format(self.name))
 
     async def receive_mayor(self, inner_websocket):
         with wave.open(self.path, 'wb') as fi:
-            fi.setnchannels(1)
+            fi.setparams(MAYOR_PARAMS)
             while True:
                 data = await inner_websocket.recv()
                 if not data:
@@ -103,14 +103,14 @@ class Town:
         os.system("rm {}".format(self.path))
 
     async def send_gift(self, websocket):
-        logging.info("{} has an excess of gold, sending some to CMA".format(self.name))
+        logging.warning("{} has an excess of gold, sending some to CMA".format(self.name))
         await websocket.send(str(1000))
         await asyncio.sleep(5)
 
     async def recieve_aid(self, websocket):
         logging.info("{} needs help from CMA".format(self.name))
         gold = await websocket.recv()
-        logging.info("{} recieved {} gold pieces from CMA!".format(self.name, gold))
+        logging.warning("{} recieved {} gold pieces from CMA!".format(self.name, gold))
 
 async def make_clients(num, address):
     towns = []
