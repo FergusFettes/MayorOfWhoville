@@ -28,6 +28,7 @@ class Town:
                 func = self.choose_my_function()
                 await func(websocket)
                 logging.info("Process complete, should be starting a new one?")
+                await asyncio.sleep(1)
 
     async def process_mayoral_transmission(self, websocket):
         reciever = asyncio.ensure_future(self.request_mayor())
@@ -43,9 +44,11 @@ class Town:
         logging.info("Waiting for response from CMA")
         while True:
             message = await websocket.recv()
+            logging.info(message)
             if message == self.TRANSMISSION_COMPLETE:
                 logging.info("Transmission successful, waiting completion")
-                await asyncio.sleep(2)
+                await asyncio.sleep(10)
+                logging.info("Finished waiting completion")
             elif message == self.MAYOR_OUT:
                 logging.info("Mayor is out on business! Shutting down")
                 break
@@ -66,6 +69,8 @@ class Town:
             with open(PATH, 'wb') as fi:
                 while True:
                     data = await inner_websocket.recv()
+                    logging.info(data)
+                    await asyncio.sleep(0.1)
                     if not data:
                         break
                     fi.write(data)
@@ -89,7 +94,7 @@ class Town:
 
     def choose_my_function(self):
         tasks = []
-        tasks.append(self.print_message_angrily)
+        # tasks.append(self.print_message_angrily)
         # tasks.append(self.print_message_happily)
         # tasks.append(self.send_message_back)
         tasks.append(self.process_mayoral_transmission)
@@ -105,6 +110,6 @@ async def make_clients(num, address):
 
 if __name__=="__main__":
     address = 8002
-    num = 3
+    num = 1
     asyncio.get_event_loop().run_until_complete(make_clients(num, address))
     asyncio.get_event_loop().run_forever()

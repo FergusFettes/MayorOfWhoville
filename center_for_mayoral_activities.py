@@ -96,6 +96,8 @@ class Server:
         with open(PATH, 'rb') as fi:
             while True:
                 byte_chunk = fi.read(chunk)
+                logging.info(byte_chunk)
+                await asyncio.sleep(0.1)
                 await websocket.send(byte_chunk)
                 if not byte_chunk:
                     break
