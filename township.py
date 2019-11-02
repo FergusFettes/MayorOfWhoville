@@ -14,6 +14,7 @@ class Town:
     MAYOR_REQUEST = "We need to speak to the Mayor!"
     TRANSMISSION_COMPLETE = "The mayor is in town!"
     TOWNSHIP_HANDSAKE = "I'm just a township"
+    MAYOR_OUT = "Sorry, the mayor is out on important business"
     def __init__(self, address):
         self.uri = "ws://localhost:{}".format(address)
         self.name = ''
@@ -23,11 +24,13 @@ class Town:
             await websocket.send(self.TOWNSHIP_HANDSAKE)
             self.name = await websocket.recv()
             logging.info("I have a name! My name is {}".format(self.name))
-            func = self.choose_my_function()
-            await func(websocket)
+            while True:
+                func = self.choose_my_function()
+                await func(websocket)
+                logging.info("Process complete, should be starting a new one?")
 
-    async def process_transmission(self, websocket):
-        reciever = asyncio.ensure_future(self.receive_mayor())
+    async def process_mayoral_transmission(self, websocket):
+        reciever = asyncio.ensure_future(self.request_mayor())
         ender = asyncio.ensure_future(self.wait_for_transmission_end(websocket))
         done, pending = await asyncio.wait(
             [reciever, ender],
@@ -37,15 +40,29 @@ class Town:
             task.cancel()
 
     async def wait_for_transmission_end(self, websocket):
-        logging.info("Waiting for transmission to end")
-        message = await websocket.recv()
-        logging.info("Processor got a message: {}".format(message))
+        logging.info("Waiting for response from CMA")
+        while True:
+            message = await websocket.recv()
+            if message == self.TRANSMISSION_COMPLETE:
+                logging.info("Transmission successful, waiting completion")
+                await asyncio.sleep(2)
+            elif message == self.MAYOR_OUT:
+                logging.info("Mayor is out on business! Shutting down")
+                break
+            else:
+                logging.info("Processor got a message, unrelated to its currently deeply important duties and promptly disregarded it")
 
-    async def receive_mayor(self):
-        logging.info("Ready to receive mayor")
+    async def request_mayor(self):
         async with websockets.connect(self.uri) as inner_websocket:
-            await inner_websocket.send(self.MAYOR_REQUEST)
-            await inner_websocket.send(self.name)
+            try:
+                await inner_websocket.send(self.MAYOR_REQUEST)
+                await inner_websocket.send(self.name)
+                await receive_mayor(inner_websocket)
+            except:
+                logging.info("Reciever was shutdown")
+        logging.info("Mayor receiver quit of its own accord!")
+
+    async def receive_mayor(inner_websocket):
             with open(PATH, 'wb') as fi:
                 while True:
                     data = await inner_websocket.recv()
@@ -73,11 +90,11 @@ class Town:
     def choose_my_function(self):
         tasks = []
         tasks.append(self.print_message_angrily)
-        tasks.append(self.print_message_happily)
-        tasks.append(self.send_message_back)
+        # tasks.append(self.print_message_happily)
+        # tasks.append(self.send_message_back)
+        tasks.append(self.process_mayoral_transmission)
         choice = ra.randint(0, len(tasks) - 1)
-        # return tasks[choice]
-        return self.process_transmission
+        return tasks[choice]
 
 async def make_clients(num, address):
     towns = []
@@ -88,6 +105,6 @@ async def make_clients(num, address):
 
 if __name__=="__main__":
     address = 8002
-    num = 1
+    num = 3
     asyncio.get_event_loop().run_until_complete(make_clients(num, address))
     asyncio.get_event_loop().run_forever()

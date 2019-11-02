@@ -34,7 +34,8 @@ class ServerHelper:
     MAYOR_REQUEST = "We need to speak to the Mayor!"
     TRANSMISSION_COMPLETE = "The mayor is in town!"
     CHUNK = 1024
-
+    MAYOR_PRESENT = True
+    MAYOR_OUT = "Sorry, the mayor is out on important business"
     def assign_connection_to_town(self, websocket):
         possible_towns = []
         for town in self.TOWNSHIPS:
@@ -70,19 +71,35 @@ class Server:
         if handshake == self.helper.TOWNSHIP_HANDSAKE:
             await self.main_township_loop(websocket)
         elif handshake == self.helper.MAYOR_REQUEST:
-            await self.send_mayor(websocket, self.helper.CHUNK)
+            await self.process_mayor_request(websocket, self.helper.CHUNK)
+        logging.info("Closing connection")
+
+    async def process_mayor_request(self, websocket, chunk):
+        if self.helper.MAYOR_PRESENT:
+            logging.info("Prepairing to send mayor")
+            self.helper.MAYOR_PRESENT = False
+
+            parent_websocket_name = await websocket.recv()
+            parent_websocket = self.helper.TOWNSHIPS[parent_websocket_name]
+
+            await self.send_mayor(websocket, chunk)
+
+            await parent_websocket.send(self.helper.TRANSMISSION_COMPLETE)
+            logging.info("Mayor sent")
+        else:
+            logging.info("Mayor not about, sending shutdown")
+            parent_websocket_name = await websocket.recv()
+            parent_websocket = self.helper.TOWNSHIPS[parent_websocket_name]
+            await parent_websocket.send(self.helper.MAYOR_OUT)
 
     async def send_mayor(self, websocket, chunk):
-        name = await websocket.recv()
-        parent_websocket = self.helper.TOWNSHIPS[name]
         with open(PATH, 'rb') as fi:
             while True:
                 byte_chunk = fi.read(chunk)
                 await websocket.send(byte_chunk)
                 if not byte_chunk:
                     break
-        await parent_websocket.send(self.helper.TRANSMISSION_COMPLETE)
-        logging.info("Mayor sent")
+        os.system("rm {}".format(PATH))
 
     async def main_township_loop(self, websocket):
         name = self.helper.assign_connection_to_town(websocket)
@@ -90,7 +107,7 @@ class Server:
             raise
         await self.assign_name(websocket, name)
         try:
-            await self.async_gather(websocket)
+            await self.async_gather_functions(websocket)
         finally:
             self.helper.remove_connection_from_town(websocket)
             logging.info("{} has disconnected!".format(name))
@@ -109,7 +126,7 @@ class Server:
             message = await websocket.recv()
             logging.info("Server got a message: {}".format(message))
 
-    async def async_gather(self, websocket):
+    async def async_gather_functions(self, websocket):
         tasks = []
         tasks.append(self.process_message(websocket))
         tasks.append(self.send_message(websocket))
