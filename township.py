@@ -20,23 +20,40 @@ class Town:
     DENIED = "Sorry, the mayor is indisposed at the moment"
     WAIT_RANGE = 10
     WAIT_MINIMUM = 5
+    MAYOR_RETURN_CHANCE = 0.3
     def __init__(self, address):
         self.uri = "ws://localhost:{}".format(address)
         self.name = ''
 
     async def initiate(self):
         async with websockets.connect(self.uri) as websocket:
-            await websocket.send(self.TOWNSHIP_HANDSAKE)
-            self.name = await websocket.recv()
-            self.path = FILE + self.name
-            logging.info("I have a name! My name is {}".format(self.name))
-            while True:
-                if os.path.exists(self.path):
-                    logging.info("Mayor is going about their important duties in {}".format(self.name))
-                else:
-                    await self.request_mayor()
-                wait_time = (ra.random() * self.WAIT_RANGE) + self.WAIT_MINIMUM
-                await asyncio.sleep(wait_time)
+            await self.identify(websocket)
+            await self.township_activities()
+
+    async def identify(self, websocket):
+        await websocket.send(self.TOWNSHIP_HANDSAKE)
+        self.name = await websocket.recv()
+        self.path = FILE + self.name
+        logging.info("I have a name! My name is {}".format(self.name))
+
+    async def township_activities(self):
+        while True:
+            if os.path.exists(self.path):
+                await self.mayor_duties()
+            else:
+                await self.request_mayor()
+            await self.idle()
+
+    async def idle(self):
+        wait_time = (ra.random() * self.WAIT_RANGE) + self.WAIT_MINIMUM
+        await asyncio.sleep(wait_time)
+
+
+    async def mayor_duties(self):
+        if ra.random() < self.MAYOR_RETURN_CHANCE:
+            await self.return_mayor()
+        else:
+            logging.info("Mayor is going about their important duties in {}".format(self.name))
 
     async def request_mayor(self):
         async with websockets.connect(self.uri) as inner_websocket:

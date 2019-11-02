@@ -100,7 +100,6 @@ class Server:
                 byte_chunk = fi.read(self.helper.CHUNK)
                 await websocket.send(byte_chunk)
                 if not byte_chunk:
-                    logging.info("breaking")
                     break
         os.system("rm {}".format(TEMP))
 
