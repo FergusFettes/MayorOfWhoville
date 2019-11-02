@@ -4,6 +4,10 @@ Welcome to the small region of Wholand, where the mayor has a very busy schedule
 
 For this you need docker. And nothing else of course, such is the beauty of docker. Oh, actually you might need docker-compose too.
 
+Ah and to hear the audio you need to install the requirements with 
+
+`pip install -m extern_requirements.txt`
+
 To start with, build the images with
 `docker build -t whoville .`
 
