@@ -4,6 +4,7 @@ import logging
 import time
 import random as ra
 import websockets
+import wave
 
 FORMAT = "%(levelname)s -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -84,7 +85,7 @@ class Server:
 
     async def async_init(self, websocket, path):
         handshake = await websocket.recv()
-        logging.info("Handshake: {}".format(handshake))
+        logging.warning("Handshake: {}".format(handshake))
         if handshake == self.helper.TOWNSHIP_HANDSAKE:
             await self.main_township_loop(websocket)
         elif handshake == self.helper.MAYOR_REQUEST:
@@ -100,26 +101,27 @@ class Server:
             logging.info("Prepairing to send mayor")
             await websocket.send(self.helper.CONFIRMED)
             await self.send_mayor(websocket)
-            logging.info("Mayor sent")
+            logging.warning("Mayor sent")
         else:
             await websocket.send(self.helper.DENIED)
 
     async def send_mayor(self, websocket):
-        with open(TEMP, 'rb') as fi:
+        with wave.open(TEMP, 'rb') as fi:
             while True:
-                byte_chunk = fi.read(self.helper.CHUNK)
+                byte_chunk = fi.readframes(self.helper.CHUNK)
                 await websocket.send(byte_chunk)
                 if not byte_chunk:
                     break
         os.system("rm {}".format(TEMP))
 
     async def receive_mayor(self, inner_websocket):
-        with open(TEMP, 'wb') as fi:
+        with wave.open(TEMP, 'wb') as fi:
+            fi.setnchannels(1)
             while True:
                 data = await inner_websocket.recv()
                 if not data:
                     break
-                fi.write(data)
+                fi.writeframes(data)
         os.system("mv {} {}".format(TEMP, FILE))
 
     async def main_township_loop(self, websocket):
@@ -132,11 +134,11 @@ class Server:
                 await self.async_gather_functions(websocket)
         finally:
             self.helper.remove_connection_from_town(websocket)
-            logging.info("{} has disconnected!".format(name))
+            logging.warning("{} has disconnected!".format(name))
 
     async def assign_name(self, websocket, name):
         await websocket.send(name)
-        logging.info("{} has been assigned!".format(name))
+        logging.warning("{} has been assigned!".format(name))
 
     async def async_gather_functions(self, websocket):
         tasks = []
@@ -156,10 +158,10 @@ class Server:
     async def mayor_keepalive(self, websocket):
         now = time.time() - self.keepalive_timer
         if now > self.helper.WAIT_RANGE:
-            logging.warning("Noone has heard from the mayor in {} seconds!".format(now))
+            logging.error("Noone has heard from the mayor in {} seconds!".format(now))
             await asyncio.sleep(self.helper.WAIT_MINIMUM)
             if time.time() - self.keepalive_timer > self.helper.WAIT_RANGE:
-                logging.error("The mayor has vanished! Resurrecting.")
+                logging.critical("The mayor has vanished! Resurrecting.")
                 os.system("cp {} {}".format(BACK, FILE))
 
     async def recieve_message(self, websocket):
@@ -170,14 +172,14 @@ class Server:
             await self.recieve_gold(message, websocket)
 
     async def recieve_gold(self, income, websocket):
-        logging.info("Recieved {} from {}! This will help out some needy people".format(income, self.helper.get_name_of_websocket(websocket)))
+        logging.warning("Recieved {} from {}! This will help out some needy people".format(income, self.helper.get_name_of_websocket(websocket)))
         self.coffers += int(income)
 
     async def send_gold(self, websocket):
         if self.coffers:
             amount = self.coffers // 5
             await websocket.send(str(amount))
-            logging.info("Send {} to {}!".format(amount, self.helper.get_name_of_websocket(websocket)))
+            logging.warning("Send {} to {}!".format(amount, self.helper.get_name_of_websocket(websocket)))
             self.coffers -= amount
 
 

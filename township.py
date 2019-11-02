@@ -4,6 +4,7 @@ import logging
 import time
 import random as ra
 import websockets
+import wave
 
 FORMAT = "%(levelname)s -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
@@ -78,12 +79,13 @@ class Town:
                 logging.info("{} patiently waiting for the mayor to be available".format(self.name))
 
     async def receive_mayor(self, inner_websocket):
-        with open(self.path, 'wb') as fi:
+        with wave.open(self.path, 'wb') as fi:
+            fi.setnchannels(1)
             while True:
                 data = await inner_websocket.recv()
                 if not data:
                     break
-                fi.write(data)
+                fi.writeframes(data)
 
     async def return_mayor(self):
         async with websockets.connect(self.uri) as inner_websocket:
@@ -92,9 +94,9 @@ class Town:
             await self.send_mayor(inner_websocket)
 
     async def send_mayor(self, inner_websocket):
-        with open(self.path, 'rb') as fi:
+        with wave.open(self.path, 'rb') as fi:
             while True:
-                byte_chunk = fi.read(self.CHUNK)
+                byte_chunk = fi.readframes(self.CHUNK)
                 await inner_websocket.send(byte_chunk)
                 if not byte_chunk:
                     break
