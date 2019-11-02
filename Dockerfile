@@ -1,5 +1,7 @@
 FROM python:3.7.2-slim
 
+# RUN apt-get update && apt-get install -y libsoundio-dev gcc libasound-dev
+
 WORKDIR /usr/src/app
 
 COPY requirements.txt ./

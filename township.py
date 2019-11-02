@@ -11,6 +11,7 @@ logging.basicConfig(level=logging.WARNING, format=FORMAT)
 
 PATH = os.path.dirname(os.path.realpath(__file__))
 FILE = PATH + "/THE_MAYOR_OF_WHOVILLE"
+# Wav file params: channels, samplewidth, framerate, blocks, compression
 MAYOR_PARAMS = wave._wave_params(1, 1, 8000, 128000, 'NONE', 'not compressed')
 
 
@@ -55,7 +56,8 @@ class Town:
         await asyncio.sleep(wait_time)
 
     async def mayor_duties(self, websocket):
-        if ra.random() < self.MAYOR_RETURN_CHANCE:
+        message = await websocket.recv()
+        if message == self.MAYOR_RETURN:
             await self.return_mayor()
         else:
             await websocket.send(self.MAYOR_KEEPALIVE)
@@ -92,7 +94,6 @@ class Town:
 
     async def return_mayor(self):
         async with websockets.connect(self.uri) as inner_websocket:
-            await inner_websocket.send(self.MAYOR_RETURN)
             logging.info("Returning mayor! Farewell!")
             await self.send_mayor(inner_websocket)
 

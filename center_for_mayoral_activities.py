@@ -52,6 +52,8 @@ class ServerHelper:
     DENIED = "Sorry, the mayor is indisposed at the moment"
     WAIT_RANGE = 10
     WAIT_MINIMUM = 5
+    MAYOR_LOCATION = "Home"
+    MAYOR_RETURN_CHANCE = 0.5
 
     def assign_connection_to_town(self, websocket):
         possible_towns = []
@@ -95,12 +97,9 @@ class Server:
         handshake = await websocket.recv()
         logging.warning("Handshake: {}".format(handshake))
         if handshake == self.helper.TOWNSHIP_HANDSAKE:
-            await self.main_township_loop(websocket)
+            await self.main_server_activities(websocket)
         elif handshake == self.helper.MAYOR_REQUEST:
             await self.process_mayor_request(websocket)
-            logging.info("Closing temporary connection")
-        elif handshake == self.helper.MAYOR_RETURN:
-            await self.receive_mayor(websocket)
             logging.info("Closing temporary connection")
 
     async def process_mayor_request(self, websocket):
@@ -121,6 +120,7 @@ class Server:
                 if not byte_chunk:
                     break
         os.system("rm {}".format(TEMP))
+        self.helper.MAYOR_LOCATION = self.helper.get_name_of_websocket(websocket)
 
     async def receive_mayor(self, inner_websocket):
         with wave.open(TEMP, 'wb') as fi:
@@ -131,8 +131,9 @@ class Server:
                     break
                 fi.writeframes(data)
         os.system("mv {} {}".format(TEMP, FILE))
+        self.helper.MAYOR_LOCATION = "Home"
 
-    async def main_township_loop(self, websocket):
+    async def main_server_activities(self, websocket):
         name = self.helper.assign_connection_to_town(websocket)
         if name == self.helper.FULLSTRING:
             raise
@@ -150,14 +151,20 @@ class Server:
 
     async def async_gather_functions(self, websocket):
         tasks = []
-        tasks.append(self.idle_township(websocket))
+        tasks.append(self.mayor_manager(websocket))
         tasks.append(self.mayor_keepalive(websocket))
         tasks.append(self.recieve_message(websocket))
         tasks.append(self.send_gold(websocket))
         await asyncio.gather(*tasks)
 
-    async def idle_township(self, websocket):
-        logging.info("Township ticking over: {}".format(
+    async def mayor_manager(self, websocket):
+        if self.helper.get_name_of_websocket(websocket) == self.helper.MAYOR_LOCATION:
+            if ra.random() < self.helper.MAYOR_RETURN_CHANCE:
+                logging.info("Demanding return of mayor!")
+                await websocket.send(self.helper.MAYOR_RETURN)
+                await self.receive_mayor(websocket)
+        else:
+            logging.info("Township ticking over: {}".format(
             self.helper.get_name_of_websocket(websocket)
         ))
         wait_time = (ra.random() * self.helper.WAIT_RANGE) + self.helper.WAIT_MINIMUM
