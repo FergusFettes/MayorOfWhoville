@@ -7,7 +7,7 @@ import websockets
 import wave
 
 FORMAT = "%(levelname)s -- \"%(message)s\""
-logging.basicConfig(level=logging.WARNING, format=FORMAT)
+logging.basicConfig(level=logging.INFO, format=FORMAT)
 
 from township import Town
 
@@ -101,14 +101,18 @@ class Server:
         elif handshake == self.helper.MAYOR_REQUEST:
             await self.process_mayor_request(websocket)
             logging.info("Closing temporary connection")
+        elif handshake == self.helper.MAYOR_RETURN:
+            await self.receive_mayor(websocket)
 
     async def process_mayor_request(self, websocket):
         if os.path.exists(FILE):
             os.system("mv {} {}".format(FILE, TEMP))
             logging.info("Prepairing to send mayor")
             await websocket.send(self.helper.CONFIRMED)
+            name = await websocket.recv()
             await self.send_mayor(websocket)
             logging.warning("Mayor sent")
+            self.helper.MAYOR_LOCATION = name
         else:
             await websocket.send(self.helper.DENIED)
 
@@ -120,7 +124,6 @@ class Server:
                 if not byte_chunk:
                     break
         os.system("rm {}".format(TEMP))
-        self.helper.MAYOR_LOCATION = self.helper.get_name_of_websocket(websocket)
 
     async def receive_mayor(self, inner_websocket):
         with wave.open(TEMP, 'wb') as fi:
@@ -158,11 +161,11 @@ class Server:
         await asyncio.gather(*tasks)
 
     async def mayor_manager(self, websocket):
-        if self.helper.get_name_of_websocket(websocket) == self.helper.MAYOR_LOCATION:
+        websocket_name = self.helper.get_name_of_websocket(websocket)
+        if websocket_name == self.helper.MAYOR_LOCATION:
             if ra.random() < self.helper.MAYOR_RETURN_CHANCE:
                 logging.info("Demanding return of mayor!")
                 await websocket.send(self.helper.MAYOR_RETURN)
-                await self.receive_mayor(websocket)
         else:
             logging.info("Township ticking over: {}".format(
             self.helper.get_name_of_websocket(websocket)

@@ -78,6 +78,7 @@ class Town:
             await inner_websocket.send(self.MAYOR_REQUEST)
             response = await inner_websocket.recv()
             if response == self.CONFIRMED:
+                await inner_websocket.send(self.name)
                 logging.warning("Recieving mayor! Oh glorious day!")
                 await self.receive_mayor(inner_websocket)
             elif response == self.DENIED:
@@ -94,6 +95,7 @@ class Town:
 
     async def return_mayor(self):
         async with websockets.connect(self.uri) as inner_websocket:
+            await inner_websocket.send(self.MAYOR_RETURN)
             logging.info("Returning mayor! Farewell!")
             await self.send_mayor(inner_websocket)
 

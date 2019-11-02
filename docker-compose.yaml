@@ -12,15 +12,15 @@ services:
     image: whoville:latest
     entrypoint: ./town_start.sh
     network_mode: host
-  town3:
-    image: whoville:latest
-    entrypoint: ./town_start.sh
-    network_mode: host
-  town4:
-    image: whoville:latest
-    entrypoint: ./town_start.sh
-    network_mode: host
-  town5:
-    image: whoville:latest
-    entrypoint: ./town_start.sh
-    network_mode: host
+  # town3:
+  #   image: whoville:latest
+  #   entrypoint: ./town_start.sh
+  #   network_mode: host
+  # town4:
+  #   image: whoville:latest
+  #   entrypoint: ./town_start.sh
+  #   network_mode: host
+  # town5:
+  #   image: whoville:latest
+  #   entrypoint: ./town_start.sh
+  #   network_mode: host
