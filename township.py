@@ -9,7 +9,7 @@ FORMAT = "%(levelname)s@%(name)s(%(asctime)s) -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
 PATH = os.path.dirname(os.path.realpath(__file__))
-FILE = PATH + "/THE_MAYOR_OF_WHOVILLE_IN_"
+FILE = PATH + "/THE_MAYOR_OF_WHOVILLE"
 
 
 class Town:
@@ -35,7 +35,7 @@ class Town:
     async def identify(self, websocket):
         await websocket.send(self.TOWNSHIP_HANDSAKE)
         self.name = await websocket.recv()
-        self.path = FILE + self.name
+        self.path = FILE
         logging.info("I have a name! My name is {}".format(self.name))
 
     async def township_activities(self, websocket):
@@ -116,6 +116,6 @@ async def make_clients(num, address):
 
 if __name__=="__main__":
     address = 8002
-    num = 10
+    num = 1
     asyncio.get_event_loop().run_until_complete(make_clients(num, address))
     asyncio.get_event_loop().run_forever()
