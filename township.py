@@ -5,7 +5,7 @@ import time
 import random as ra
 import websockets
 
-FORMAT = "%(levelname)s@%(name)s(%(asctime)s) -- \"%(message)s\""
+FORMAT = "%(levelname)s@%(name)s(%(asctime)s)\n -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
 PATH = os.path.dirname(os.path.realpath(__file__))
@@ -14,6 +14,7 @@ FILE = PATH + "/THE_MAYOR_OF_WHOVILLE"
 
 class Town:
     MAYOR_REQUEST = "We need to speak to the Mayor!"
+    MAYOR_KEEPALIVE = "We still have them, done worry!"
     MAYOR_RETURN = "The mayor has done us a great service!"
     TOWNSHIP_HANDSAKE = "I'm just a township"
     TRANSMISSION_COMPLETE = "The mayor is in town!"
@@ -41,7 +42,7 @@ class Town:
     async def township_activities(self, websocket):
         while True:
             if os.path.exists(self.path):
-                await self.mayor_duties()
+                await self.mayor_duties(websocket)
             else:
                 await self.other_activities(websocket)
                 await self.request_mayor()
@@ -51,10 +52,11 @@ class Town:
         wait_time = (ra.random() * self.WAIT_RANGE) + self.WAIT_MINIMUM
         await asyncio.sleep(wait_time)
 
-    async def mayor_duties(self):
+    async def mayor_duties(self, websocket):
         if ra.random() < self.MAYOR_RETURN_CHANCE:
             await self.return_mayor()
         else:
+            await websocket.send(self.MAYOR_KEEPALIVE)
             logging.info("Mayor is going about their important duties in {}".format(self.name))
 
     async def other_activities(self, websocket):

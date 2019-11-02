@@ -5,7 +5,7 @@ import time
 import random as ra
 import websockets
 
-FORMAT = "%(levelname)s@%(name)s(%(asctime)s) -- \"%(message)s\""
+FORMAT = "%(levelname)s@%(name)s(%(asctime)s)\n -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
 from township import Town
@@ -13,6 +13,7 @@ from township import Town
 PATH = os.path.dirname(os.path.realpath(__file__))
 FILE = PATH + "/THE_MAYOR_OF_WHOVILLE"
 TEMP = PATH + "/NOTHING_TO_SEE_HERE"
+BACK = PATH + "/REALLY_NOTHING_TO_SEE_HERE"
 
 class ServerHelper:
     TOWNSHIPS = {
@@ -36,6 +37,7 @@ class ServerHelper:
     MAYOR_REQUEST = "We need to speak to the Mayor!"
     MAYOR_RETURN = "The mayor has done us a great service!"
     TRANSMISSION_COMPLETE = "The mayor is in town!"
+    MAYOR_KEEPALIVE = "We still have them, done worry!"
     CHUNK = 1024
     CONFIRMED = "Mayor will be right there!"
     DENIED = "Sorry, the mayor is indisposed at the moment"
@@ -73,6 +75,9 @@ class Server:
     def __init__(self):
         self.helper = ServerHelper()
         self.coffers = 0
+        self.keepalive_timer = time.time()
+        # Backup the mayor, in case one of the swarm drops them during a restart
+        os.system("cp {} {}".format(FILE, BACK))
 
     def create_websocket_handler(self, address):
         return websockets.serve(self.async_init, "localhost", address)
@@ -136,10 +141,10 @@ class Server:
     async def async_gather_functions(self, websocket):
         tasks = []
         tasks.append(self.idle_township(websocket))
-        tasks.append(self.recieve_gold(websocket))
+        tasks.append(self.mayor_keepalive(websocket))
+        tasks.append(self.recieve_message(websocket))
         tasks.append(self.send_gold(websocket))
         await asyncio.gather(*tasks)
-
 
     async def idle_township(self, websocket):
         logging.info("Township ticking over: {}".format(
@@ -148,7 +153,22 @@ class Server:
         wait_time = (ra.random() * self.helper.WAIT_RANGE) + self.helper.WAIT_MINIMUM
         await asyncio.sleep(wait_time)
 
-    async def recieve_gold(self, websocket):
+    async def mayor_keepalive(self, websocket):
+        if time.time() - self.keepalive_timer > self.helper.WAIT_RANGE:
+            logging.warn("Looks like the mayor might be missing!")
+            await asyncio.sleep(self.helper.WAIT_MINIMUM)
+            if time.time() - self.keepalive_timer > self.helper.WAIT_RANGE:
+                logging.error("The mayor has vanished! Resurrecting.")
+                os.system("cp {} {}".format(BACK, FILE))
+
+    async def recieve_message(self, websocket):
+        message = await websocket.recv()
+        if message == self.helper.MAYOR_KEEPALIVE:
+            self.keepalive_timer = time.time()
+        else:
+            await self.recieve_gold(message)
+
+    async def recieve_gold(self, income):
         income = await websocket.recv()
         logging.info("Recieved {} from {}! This will help out some needy people".format(income, self.helper.get_name_of_websocket(websocket)))
         self.coffers += int(income)
