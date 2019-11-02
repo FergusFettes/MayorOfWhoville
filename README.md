@@ -2,11 +2,17 @@
 
 Welcome to the small region of Wholand, where the mayor has a very busy schedule visiting all the townships in their district!
 
-For this you need docker. And nothing else of course, such is the beauty of docker.
+For this you need docker. And nothing else of course, such is the beauty of docker. Oh, actually you might need docker-compose too.
 
 To start with, build the images with
 `docker build -t whoville .`
 
+## Docker-compose version:
+Run `docker-compose up`
+
+and you will see the activities of the townships in the district of Whoville! Oh frabjous day!
+
+## Docker Swarm version, for real heros:
 To start the Center for Mayoral Activities (which coordinates the movements of the mayor, as well as sending and recieving donations), run
 
 `docker service create --replicas 1 --name cma --network=host whoville:latest ./cma_start.sh`
