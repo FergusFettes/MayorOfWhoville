@@ -4,7 +4,7 @@ import asyncio
 import logging
 
 FORMAT = "%(levelname)s -- \"%(message)s\""
-logging.basicConfig(level=logging.WARNING, format=FORMAT)
+logging.basicConfig(level=logging.INFO, format=FORMAT)
 # Wav file params: channels, samplewidth, framerate, blocks, compression
 # MAYOR_PARAMS = wave._wave_params(1, 1, 8000, 128000, 'NONE', 'not compressed')
 

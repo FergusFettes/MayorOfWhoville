@@ -7,7 +7,7 @@ import websockets
 import wave
 
 FORMAT = "%(levelname)s -- \"%(message)s\""
-logging.basicConfig(level=logging.INFO, format=FORMAT)
+logging.basicConfig(level=logging.WARNING, format=FORMAT)
 
 from township import Town
 
@@ -127,6 +127,7 @@ class Server:
     async def send_mayor(self, websocket):
         with wave.open(TEMP, 'rb') as fi:
             while True:
+
                 byte_chunk = fi.readframes(self.helper.CHUNK)
                 await websocket.send(byte_chunk)
                 if not byte_chunk:
@@ -209,23 +210,29 @@ class Server:
         await asyncio.sleep(self.helper.WAIT_RANGE)
 
     async def recieve_message(self, websocket):
-        message = await websocket.recv()
-        if message == self.helper.MAYOR_KEEPALIVE:
-            self.keepalive_timer = time.time()
-            logging.info("Keepalive reset!")
+        if self.transmission_ongoing:
+            await asyncio.sleep(self.helper.WAIT_RANGE)
         else:
-            await self.recieve_gold(message, websocket)
+            message = await websocket.recv()
+            if message == self.helper.MAYOR_KEEPALIVE:
+                self.keepalive_timer = time.time()
+                logging.info("Keepalive reset!")
+            else:
+                await self.recieve_gold(message, websocket)
 
     async def recieve_gold(self, income, websocket):
         logging.warning("Recieved {} from {}! This will help out some needy people".format(income, self.helper.get_name_of_websocket(websocket)))
         self.coffers += int(income)
 
     async def send_gold(self, websocket):
-        if self.coffers:
-            amount = self.coffers // 5
-            await websocket.send(str(amount))
-            logging.warning("Send {} to {}!".format(amount, self.helper.get_name_of_websocket(websocket)))
-            self.coffers -= amount
+        if self.transmission_ongoing:
+            await asyncio.sleep(self.helper.WAIT_RANGE)
+        else:
+            if self.coffers:
+                amount = self.coffers // 5
+                await websocket.send(str(amount))
+                logging.warning("Send {} to {}!".format(amount, self.helper.get_name_of_websocket(websocket)))
+                self.coffers -= amount
 
 
 
