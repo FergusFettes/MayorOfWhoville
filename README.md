@@ -30,3 +30,13 @@ If you want to calm the activity down a little run
 `docker service scale town=3`
 
 to remove some towns. Unfortunately, sometimes the mayor gets lost in the process (if they were in one of the towns that was removed) but they will get resurrected.
+
+## Suspicious?
+
+If you are suspicious that nothing is actually happening, please run 
+
+`python3 host_listener.py`
+
+to hear a direct broadcast from the mayor, wherever they are! They will also tell you where they are at the moment.
+
+Enjoy!

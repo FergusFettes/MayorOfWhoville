@@ -147,6 +147,7 @@ class Server:
     async def request_transmission(self, websocket):
         mayor_websocket = self.helper.TOWNSHIPS[self.helper.MAYOR_LOCATION]
         await mayor_websocket.send(self.helper.LISTENER_REQUEST)
+        await websocket.send("The mayor will be with you soon, transmitting directly from {}!".format(self.helper.MAYOR_LOCATION))
         await self.pass_transmission_to(websocket, mayor_websocket)
 
     async def pass_transmission_to(self, listener_websocket, mayor_websocket):

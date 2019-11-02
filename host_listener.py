@@ -40,6 +40,8 @@ class Listener:
     async def request_to_speak_with_the_mayor(self):
         async with websockets.connect(self.uri) as websocket:
             await websocket.send(self.LISTENER_REQUEST)
+            response = await websocket.recv()
+            logging.info(response)
             transmission = []
             transmission.append(self.receive_transmission(websocket))
             transmission.append(self.broadcast_mayor())
