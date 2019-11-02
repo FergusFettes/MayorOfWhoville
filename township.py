@@ -66,7 +66,10 @@ class Town:
         activities.append(self.request_mayor())
         activities.append(self.send_gift(websocket))
         activities.append(self.recieve_aid(websocket))
-        await asyncio.gather(*activities)
+        done, pending = await asyncio.wait(activities,
+                return_when=asyncio.FIRST_COMPLETED)
+        for activity in pending:
+            activity.cancel()
 
     async def request_mayor(self):
         async with websockets.connect(self.uri) as inner_websocket:
