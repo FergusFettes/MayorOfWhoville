@@ -5,7 +5,7 @@ import time
 import random as ra
 import websockets
 
-FORMAT = "%(levelname)s@%(name)s(%(asctime)s) -- \"%(message)s\""
+FORMAT = "%(levelname)s -- \"%(message)s\""
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
 from township import Town
