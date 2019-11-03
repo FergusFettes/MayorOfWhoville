@@ -1,3 +1,4 @@
+import soundfile as sf
 import wave
 import os
 import asyncio
@@ -26,17 +27,34 @@ class StreamTranscriber:
         name = FILE + ".wav"
         params = await websocket.recv()
         params = params.split(',')
-        with wave.open(name, 'wb') as fi:
-            fi.setnchannels(int(params[0]))
-            fi.setsampwidth(int(params[1]))
-            fi.setframerate(int(params[2]))
-            while True:
-                data = await websocket.recv()
-                logging.info("Bytes received")
-                if not data:
-                    logging.info("Empty packet received, closing")
-                    break
-                fi.writeframes(data)
+        params = [int(i) for i in params]
+        special = await websocket.recv()
+        if special == "True":
+            await self.pysoundio_func(websocket, params)
+        else:
+            with wave.open(name, 'wb') as fi:
+                fi.setnchannels(params[0])
+                fi.setsampwidth(params[1])
+                fi.setframerate(params[2])
+                while True:
+                    data = await websocket.recv()
+                    logging.info("Bytes received")
+                    if not data:
+                        logging.info("Empty packet received, closing")
+                        break
+                    fi.writeframes(data)
+
+    async def pysoundio_func(self, websocket, params):
+        wav_file = sf.SoundFile(
+            FILE + ".wav", mode='w', channels=params[0],
+            samplerate=params[2]
+        )
+        while True:
+            data = await websocket.recv()
+            if not data:
+                break
+            wav_file.buffer_write(data, dtype='float32')
+        wav_file.close()
 
 if __name__=="__main__":
     address = 8003
