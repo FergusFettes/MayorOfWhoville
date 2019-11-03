@@ -20,7 +20,7 @@ class StreamTranscriber:
     async def async_init(self, websocket, path):
         logging.warning("Prepairing to receive stream")
         await self.receive_stream(websocket)
-        logging.warning("Stream received, disconnecting")
+        logging.warning("Stream finished, disconnecting")
 
     async def receive_stream(self, websocket):
         # name = "{}_{}.wav".format(FILE, str(hash(websocket)))
@@ -28,21 +28,17 @@ class StreamTranscriber:
         params = await websocket.recv()
         params = params.split(',')
         params = [int(i) for i in params]
-        special = await websocket.recv()
-        if special == "True":
-            await self.pysoundio_func(websocket, params)
-        else:
-            with wave.open(name, 'wb') as fi:
-                fi.setnchannels(params[0])
-                fi.setsampwidth(params[1])
-                fi.setframerate(params[2])
-                while True:
-                    data = await websocket.recv()
-                    logging.info("Bytes received")
-                    if not data:
-                        logging.info("Empty packet received, closing")
-                        break
-                    fi.writeframes(data)
+        await self.pysoundio_func(websocket, params)
+
+    async def write_with_wav(self, websocket, params):
+        with wave.open(FILE + ".wav", 'wb') as fi:
+            fi.setnchannels(params[0])
+            fi.setsampwidth(params[1])
+            fi.setframerate(params[2])
+            while True:
+                data = await websocket.recv()
+                logging.info("Bytes received")
+                fi.writeframes(data)
 
     async def pysoundio_func(self, websocket, params):
         wav_file = sf.SoundFile(
@@ -52,8 +48,6 @@ class StreamTranscriber:
         while True:
             data = await websocket.recv()
             logging.info("Bytes received")
-            if not data:
-                break
             wav_file.buffer_write(data, dtype='int16')
         wav_file.close()
 

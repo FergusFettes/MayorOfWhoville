@@ -19,32 +19,16 @@ FILE = PATH + "/transmission_file"
 WAV_PARAMS = wave._wave_params(1, 1, 8000, 0, 'NONE', 'not compressed')
 
 
-class PyAudioStreamer:
-    def __init__(self):
-        self.CHUNK = CHUNK
-        self.pyaudio_object = pyaudio.PyAudio()
-        self.params = "1,2,44100"
-        self.stream = self.pyaudio_object.open(
-            channels=1,
-            format=pyaudio.paInt16,
-            rate=44100,
-            input=True,
-            frames_per_buffer=self.CHUNK,
-        )
-    def close(self):
-        self.stream.close()
-        self.pyaudio_object.terminate()
-
 class PySoundIoStreamer:
     def __init__(self):
         self.CHUNK = 1024
         self.pysoundio_object = pysoundio.PySoundIo(backend=None)
-        self.params = "2,9,44100"
+        self.params = "1,2,44100"
         self.buffer = queue.Queue(maxsize=CHUNK * 50)
         logging.info("Starting stream")
         self.pysoundio_object.start_input_stream(
             device_id=None,
-            channels=2,
+            channels=1,
             sample_rate=44100,
             block_size=self.CHUNK,
             dtype=pysoundio.SoundIoFormatS16LE,
@@ -67,57 +51,23 @@ class PySoundIoStreamer:
     def close(self):
         self.pysoundio_object.close()
 
-class FileStreamer:
-    def __init__(self):
-        self.CHUNK = CHUNK
-        self.wf = wave.open(FILE)
-        self.params = "1,1,8000"
-        class Stream: pass
-        self.stream = Stream()
-        self.stream.read = self.wf.readframes
-
-    def close(self):
-        self.wf.close()
-
 class Streamer:
     TIMEOUT = 4
-    CLIENT_HANDSHAKE = "How dyou do?"
-    CANCEL_TRANSMISSION = "Please shutdown the connection"
-    AUDIOSTREAM = "Stream coming through double quick"
     def __init__(self, address, streamer):
         self.uri = "ws://localhost:{}".format(address)
-        self.name = 0
-        if streamer == "file":
-            self.streamer = FileStreamer()
-        elif streamer == "pyaudio":
-            self.streamer = PyAudioStreamer()
-        elif streamer == "pysoundio":
-            self.streamer = PySoundIoStreamer()
+        self.streamer = PySoundIoStreamer()
 
     async def register_with_server(self):
         async with websockets.connect(self.uri) as websocket:
             logging.warning("Starting stream transmission")
-            await self.stream_without_timeout(websocket)
+            await self.stream_over_websockets(websocket)
             self.streamer.close()
             logging.warning("Stream transmission ended")
 
-    async def stream_without_timeout(self, websocket):
+    async def stream_over_websockets(self, websocket):
         await websocket.send(self.streamer.params)
-        if type(self.streamer) is PySoundIoStreamer:
-            await websocket.send("True")
-            while True:
-                await self.streamer.stream_to_websocket(websocket)
-        else:
-            await websocket.send("False")
-        try:
-            while True:
-                logging.info("Sending bytes")
-                data = self.streamer.stream.read(self.streamer.CHUNK)
-                if not data:
-                    break
-                await websocket.send(data)
-        except:
-            pass
+        while True:
+            await self.streamer.stream_to_websocket(websocket)
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Streams stuff to websocket")
