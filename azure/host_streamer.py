@@ -49,8 +49,8 @@ class PySoundIoStreamer:
             device_id=None,
             channels=2,
             sample_rate=44100,
-            block_size=4096,
-            dtype=pysoundio.SoundIoFormatFloat32LE,
+            block_size=self.CHUNK,
+            dtype=pysoundio.SoundIoFormatS16LE,
             read_callback=self.callback,
         )
 
@@ -91,22 +91,25 @@ class Streamer:
     async def register_with_server(self):
         async with websockets.connect(self.uri) as websocket:
             logging.warning("Starting stream transmission")
-            await self.stream_with_timeout(websocket)
+            await self.stream_without_timeout(websocket)
             self.streamer.close()
-            logging.warning("Stream transmission ended successfully")
+            logging.warning("Stream transmission ended")
 
-    async def stream_with_timeout(self, websocket):
+    async def stream_without_timeout(self, websocket):
         await websocket.send(self.streamer.params)
         if type(self.streamer) is PySoundIoStreamer:
             await websocket.send("True")
         else:
             await websocket.send("False")
-        while True:
-            logging.info("Sending bytes")
-            data = self.streamer.stream.read(self.streamer.CHUNK)
-            if not data:
-                break
-            await websocket.send(data)
+        try:
+            while True:
+                logging.info("Sending bytes")
+                data = self.streamer.stream.read(self.streamer.CHUNK)
+                if not data:
+                    break
+                await websocket.send(data)
+        except:
+            pass
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Streams stuff to websocket")

@@ -51,9 +51,10 @@ class StreamTranscriber:
         )
         while True:
             data = await websocket.recv()
+            logging.info("Bytes received")
             if not data:
                 break
-            wav_file.buffer_write(data, dtype='float32')
+            wav_file.buffer_write(data, dtype='int16')
         wav_file.close()
 
 if __name__=="__main__":
