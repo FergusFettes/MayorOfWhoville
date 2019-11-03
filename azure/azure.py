@@ -5,10 +5,10 @@ import logging
 import websockets
 
 FORMAT = "%(levelname)s -- \"%(message)s\""
-logging.basicConfig(level=logging.WARNING, format=FORMAT)
+logging.basicConfig(level=logging.INFO, format=FORMAT)
 
 PATH = os.path.dirname(os.path.realpath(__file__))
-FILE = PATH + "/output.wav"
+FILE = PATH + "/output"
 # Wav file params: channels, samplewidth, framerate, blocks, compression
 WAV_PARAMS = wave._wave_params(1, 1, 8000, 128000, 'NONE', 'not compressed')
 
@@ -30,13 +30,16 @@ class StreamTranscriber:
         if handshake == self.CLIENT_HANDSHAKE:
             await self.main_server_activities(websocket)
         elif handshake == self.AUDIOSTREAM:
-            parent = await webocket.recv()
+            parent = await websocket.recv()
+            logging.info(parent)
             if parent in self.CONNECTED.keys():
                 self.CHILDREN[self.CONNECTED[parent]] = websocket
+                logging.info("Accepting transmission")
                 await self.receive_stream(websocket)
 
     async def receive_stream(self, websocket):
-        with wave.open(FILE, 'wb') as fi:
+        name = "{}_{}.wav".format(FILE, str(hash(websocket)))
+        with wave.open(name, 'wb') as fi:
             fi.setparams(WAV_PARAMS)
             while True:
                 data = await websocket.recv()
@@ -47,13 +50,14 @@ class StreamTranscriber:
     async def main_server_activities(self, websocket):
         await self.identify(websocket)
         try:
-            await self.main_server_functions(self, websocket)
+            await self.main_server_functions(websocket)
         finally:
-            self.CONNECTED.pop(socketid)
+            self.CONNECTED.pop(str(hash(websocket)))
 
     async def identify(self, websocket):
         socketid = hash(websocket)
         self.CONNECTED[str(socketid)] = websocket
+        logging.info(self.CONNECTED)
         await websocket.send(str(socketid))
 
     async def main_server_functions(self, websocket):
@@ -74,12 +78,14 @@ class StreamTranscriber:
             if message == self.CANCEL_TRANSMISSION:
                 for websocket in self.CHILDREN[websocket]:
                     websocket.close()
+            await asyncio.sleep(10)
 
     async def send_message(self, websocket):
         while True:
             whatever = "whatever"
             await websocket.send(whatever)
-            logging.info("Sent {} to client".format(whatever))
+            logging.info("Server sent messge")
+            await asyncio.sleep(10)
 
 if __name__=="__main__":
     address = 8003
