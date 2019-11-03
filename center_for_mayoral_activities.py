@@ -102,10 +102,8 @@ class Server:
             await self.main_server_activities(websocket)
         elif handshake == self.helper.MAYOR_REQUEST:
             await self.process_mayor_request(websocket)
-            logging.info("Closing temporary connection")
         elif handshake == self.helper.MAYOR_RETURN:
             await self.receive_mayor(websocket)
-            logging.info("Closing temporary connection")
         elif handshake == self.helper.LISTENER_REQUEST:
             self.transmission_ongoing = True
             logging.warning("Someone wants to hear the mayor! Requesting transmission")
@@ -127,7 +125,6 @@ class Server:
     async def send_mayor(self, websocket):
         with wave.open(TEMP, 'rb') as fi:
             while True:
-
                 byte_chunk = fi.readframes(self.helper.CHUNK)
                 await websocket.send(byte_chunk)
                 if not byte_chunk:

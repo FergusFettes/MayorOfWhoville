@@ -32,6 +32,7 @@ class Town:
         os.system("rm {}".format(FILE))
         self.uri = "ws://localhost:{}".format(address)
         self.name = ''
+        self.path = ''
 
     async def initiate(self):
         async with websockets.connect(self.uri) as websocket:

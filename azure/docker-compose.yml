@@ -1,0 +1,8 @@
+version: '3'
+services:
+  scribe:
+    image: scribe:latest
+    network_mode: host
+    volumes:
+     -  "./:/usr/src/app/:rw"
+
