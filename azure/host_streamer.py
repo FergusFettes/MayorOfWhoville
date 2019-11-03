@@ -41,18 +41,20 @@ class PySoundIoStreamer:
         self.buffer = queue.Queue(maxsize=CHUNK * 10)
         class Stream: pass
         self.stream = Stream()
-        self.stream.read = self.buffer.get()
+        self.stream.read = self.buffer.get
+        logging.info("Starting stream")
         self.pysoundio_object.start_input_stream(
             device_id=None,
             channels=1,
             sample_rate=44100,
-            block_size=1024,
+            block_size=CHUNK,
             dtype=pysoundio.SoundIoFormatU8,
-            read_callback=self.callback
+            read_callback=self.callback,
         )
 
     def callback(self, data, length):
-        self.audio_buffer.put(data)
+        logging.info("Dumping data")
+        self.buffer.put(data)
 
     def close(self):
         self.pysoundio_object.close()
