@@ -23,15 +23,17 @@ class PySoundIoStreamer:
     def __init__(self):
         self.CHUNK = 1024
         self.pysoundio_object = pysoundio.PySoundIo(backend=None)
-        self.params = "1,2,44100"
+        self.params = "1,2,16000"
         self.buffer = queue.Queue(maxsize=CHUNK * 50)
         logging.info("Starting stream")
         self.pysoundio_object.start_input_stream(
             device_id=None,
             channels=1,
-            sample_rate=44100,
+            sample_rate=16000,
             block_size=self.CHUNK,
             dtype=pysoundio.SoundIoFormatS16LE,
+            # quality gets really shitty at low sample rate and width
+            # dtype=pysoundio.SoundIoFormatU8,
             read_callback=self.callback,
         )
 
@@ -66,6 +68,7 @@ class Streamer:
 
     async def stream_over_websockets(self, websocket):
         await websocket.send(self.streamer.params)
+        await websocket.send("av")
         while True:
             await self.streamer.stream_to_websocket(websocket)
 
