@@ -6,7 +6,7 @@ For this you need docker. And nothing else of course, such is the beauty of dock
 
 Ah and to hear the audio you need to install the requirements with 
 
-`pip install -m extern_requirements.txt`
+`pip install -r extern_requirements.txt`
 
 To start with, build the images with
 `docker build -t whoville .`
